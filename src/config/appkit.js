@@ -8,8 +8,8 @@ const projectId = '8d7f0c0279b3e372faffa3cc0d66d835';
 
 // Metadata for wallet verification
 const metadata = {
-  name: 'GCC Dashboard',
-  description: 'GCC Members Dashboard for token and NFT holders on BSC',
+  name: 'GCC ',
+  description: 'GCC Members  for token and NFT holders on BSC',
   url: 'https://gcc-bsc.online',
   icons: ['https://yourdomain.com/icon.png']
 };
