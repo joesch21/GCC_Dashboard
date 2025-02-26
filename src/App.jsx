@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
+import './App.css'; // 1) import your new CSS
 import { createAppKit } from '@reown/appkit/react';
 import { EthersAdapter } from '@reown/appkit-adapter-ethers';
 import { defineChain } from '@reown/appkit/networks';
-import { useAppKitAccount } from '@reown/appkit/react'; // Get wallet details
+import { useAppKitAccount } from '@reown/appkit/react';
 import ConnectButton from './components/ConnectButton';
 
-// ------------------ APPKIT CONFIG ------------------
+// -- APPKIT CONFIG (same as before) --
 const projectId = '8d7f0c0279b3e372faffa3cc0d66d835';
 const metadata = {
   name: 'GCCDashboard',
-  description: 'GCC Members Dashboard for token and NFT holders',
+  description: 'GCC Members Dashboard for token & NFT holders',
   url: 'https://gcc-bsc.online',
   icons: ['https://yourdomain.com/icon.png'],
 };
@@ -45,121 +46,130 @@ createAppKit({
   projectId,
   features: { analytics: true },
   chainImages: {
-    56: '/bsc-logo.png',
+    56: 'public/bsc-logo.png',
   },
 });
 
-// ------------------ API ENDPOINTS ------------------
 const API_BASE_URL = 'https://gcc-server-1.onrender.com';
 
 export default function App() {
   const { address, isConnected } = useAppKitAccount();
+
   const [gccPrice, setGccPrice] = useState(null);
   const [gccBalance, setGccBalance] = useState(null);
-  const [gccVolumeData, setGccVolumeData] = useState(null);
+  const [volumeData, setVolumeData] = useState(null);
 
-  // ------------------ Fetch GCC Price ------------------
+  // 1) Fetch GCC Price
   useEffect(() => {
     async function fetchPrice() {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/gcc/price`);
-        const data = await response.json();
-
-        // data might look like { success: true, dexPrice: "0.018...", bscPrice: "Not available" }
-        if (data.success) {
-          // Show both Dex & BscScan price if available
-          setGccPrice(
-            `DexScreener: ${data.dexPrice}, BscScan: ${data.bscPrice}`
-          );
+        const res = await fetch(`${API_BASE_URL}/api/gcc/price`);
+        const json = await res.json();
+        if (json.success) {
+          setGccPrice(`Dex: ${json.dexPrice}, Bsc: ${json.bscPrice}`);
         } else {
-          setGccPrice('N/A');
+          setGccPrice('Price not found');
         }
-      } catch (error) {
-        console.error('Error fetching GCC price:', error);
+      } catch (err) {
+        console.error('Error fetching GCC price:', err);
         setGccPrice('Error');
       }
     }
     fetchPrice();
   }, []);
 
-  // ------------------ Fetch GCC Volume Data ------------------
+  // 2) Fetch GCC Volume
   useEffect(() => {
     async function fetchVolume() {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/gcc/volume`);
-        const json = await response.json();
-
-        // json might look like { success: true, data: { volume24hUsd: ..., gccTradedVolume: ... } }
+        const res = await fetch(`${API_BASE_URL}/api/gcc/volume`);
+        const json = await res.json();
         if (json.success) {
-          setGccVolumeData(json.data); // store the entire data object
+          setVolumeData(json.data);
         } else {
-          setGccVolumeData(null);
+          setVolumeData(null);
         }
-      } catch (error) {
-        console.error('Error fetching GCC volume data:', error);
-        setGccVolumeData(null);
+      } catch (err) {
+        console.error('Error fetching volume:', err);
+        setVolumeData(null);
       }
     }
     fetchVolume();
   }, []);
 
-  // ------------------ Fetch User’s GCC Balance if Connected ------------------
+  // 3) Fetch On-Chain GCC Balance
   useEffect(() => {
     if (!isConnected) return;
 
     async function fetchBalance() {
       try {
-        const response = await fetch(
-          `${API_BASE_URL}/api/gcc/balance/${address}`
-        );
-        const data = await response.json();
-        setGccBalance(data.balance || 'N/A');
-      } catch (error) {
-        console.error('Error fetching GCC balance:', error);
+        const res = await fetch(`${API_BASE_URL}/api/gcc/balance/${address}`);
+        const json = await res.json();
+        if (json.success) {
+          setGccBalance(json.balance);
+        } else {
+          setGccBalance('N/A');
+        }
+      } catch (err) {
+        console.error('Error fetching GCC balance:', err);
         setGccBalance('Error');
       }
     }
-
     fetchBalance();
   }, [isConnected, address]);
 
-  // ------------------ Render ------------------
   return (
-    <div style={{ padding: '1rem' }}>
+    // 2) Add your container class
+    <div className="dashboard-container">
       <h1>Welcome to GCC Dashboard</h1>
-      <ConnectButton />
 
-      {/* Wallet Connection */}
+      {/* Center the ConnectButton if you like */}
+      <div className="connect-btn-container">
+        <ConnectButton />
+      </div>
+
+      {/* 1) Wallet Info */}
       {isConnected ? (
-        <div>
-          <p>Wallet Address: {address}</p>
-          <p>GCC Balance: {gccBalance || 'Loading...'}</p>
+        <div className="info-card">
+          <h2>Wallet Info</h2>
+          <p><strong>Wallet:</strong> {address}</p>
+          <p><strong>GCC Balance:</strong> {gccBalance ?? 'Loading...'}</p>
         </div>
       ) : (
-        <p>Connect your wallet to view your GCC balance.</p>
-      )}
-
-      {/* GCC Price */}
-      <p style={{ marginTop: '1rem' }}>
-        <strong>GCC Price: </strong>
-        {gccPrice || 'Loading...'}
-      </p>
-
-      {/* Volume Data from Flask */}
-      {gccVolumeData ? (
-        <div style={{ marginTop: '1rem' }}>
-          <h2>24h Volume Data</h2>
-          <p><strong>Price (USD):</strong> {gccVolumeData.priceUsd?.toFixed(6)}</p>
-          <p><strong>24h Trading Volume (USD):</strong> {gccVolumeData.volume24hUsd?.toFixed(6)}</p>
-          <p><strong>Traded Volume (GCC):</strong> {gccVolumeData.gccTradedVolume?.toFixed(6)}</p>
-          <p><strong>Reward for Token Holders (1%):</strong> {gccVolumeData.rewardTokenHolders?.toFixed(6)} GCC</p>
-          <p><strong>Reward for NFT Holders (1%):</strong> {gccVolumeData.rewardNFTHolders?.toFixed(6)} GCC</p>
+        <div className="info-card">
+          <p>Please connect your wallet to view your GCC balance.</p>
         </div>
-      ) : (
-        <p style={{ color: 'red', marginTop: '1rem' }}>
-          No volume data available yet. Please check back later.
-        </p>
       )}
+
+      {/* 2) GCC Price */}
+      <div className="info-card">
+        <h2>GCC Price</h2>
+        <p><strong>Price:</strong> {gccPrice ?? 'Loading...'}</p>
+      </div>
+
+      {/* 3) Advanced Volume Data */}
+      <div className="info-card">
+        <h2>GCC 24h Volume Data</h2>
+        {volumeData ? (
+          <>
+            <p><strong>Address:</strong> {volumeData.address}</p>
+            <p><strong>Chain ID:</strong> {volumeData.chainId}</p>
+            <p><strong>Price (USD):</strong> {volumeData.priceUsd?.toFixed(6)}</p>
+            <p><strong>24h Trading Volume (USD):</strong> {volumeData.volume24hUsd?.toFixed(6)}</p>
+            <p><strong>GCC Traded Volume (GCC):</strong> {volumeData.gccTradedVolume?.toFixed(6)}</p>
+            <p><strong>Reward Token Holders (1%):</strong> {volumeData.rewardTokenHolders?.toFixed(6)} GCC</p>
+            <p><strong>Reward NFT Holders (1%):</strong> {volumeData.rewardNFTHolders?.toFixed(6)} GCC</p>
+            <p><strong>Price 24h Ago (USD):</strong> {volumeData.priceUsd24hAgo?.toFixed(6)}</p>
+            <p><strong>Price 7d Ago (USD):</strong> {volumeData.priceUsd7dAgo?.toFixed(6)}</p>
+            <p><strong>Total Reserve (USD):</strong> {volumeData.totalReserveUsd?.toFixed(2)}</p>
+            <p><strong>Circulating Supply (USD):</strong> {volumeData.circulatingSupplyUsd?.toFixed(2)}</p>
+            <p><strong>Market Cap (USD):</strong> {volumeData.marketCapUsd?.toFixed(2)}</p>
+            <p><strong>Trades in Last 24h:</strong> {volumeData.trades24h}</p>
+          </>
+        ) : (
+          <p className="text-muted">No volume data available yet.</p>
+        )}
+      </div>
     </div>
   );
 }
