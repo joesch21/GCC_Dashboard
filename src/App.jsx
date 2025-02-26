@@ -46,7 +46,7 @@ createAppKit({
   projectId,
   features: { analytics: true },
   chainImages: {
-    56: 'public/bsc-logo.png',
+    56: '/bsc-logo.png',
   },
 });
 
